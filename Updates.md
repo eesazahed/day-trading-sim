@@ -52,3 +52,8 @@
 
 - Removed train-mode **grey future candles** by deleting preview wiring from `TrainTradingView` (`BuildPreviewCandles` / `GhostBars` / preview copy). Coach now explicitly uses only printed bars.
 - Reworked coach output to be **action-first** and non-generic: each pause now returns `Action` = `Buy` / `Wait` / `Sell` plus a concrete “Now is a good time to ... because ...” reason tied to current printed context (trend, level distance, candle structure). `TrainCoachPanel` now shows the action tag.
+
+## 2026-04-06 22:05 (multiplayer — delete finished matches)
+
+- Added migration **`20260406200000_match_delete_finished.sql`**: RLS policy **`match_rooms_delete_finished`** allows **`DELETE` on `match_rooms` only when `phase = 'finished'`**, plus **`grant delete`** to `anon` / `authenticated`. **`match_players`** rows still cascade off the room.
+- **`MatchView`**: after a match is marked **finished**, the client schedules a **2s** delayed delete (so both tabs usually see **`finished`** over Realtime first), then deletes the room. **`EndedOverlay`** keeps the “Match over” UI after the row is gone; **`FetchRoomAndPlayers`** treats “not found” as OK when the match already ended so users do not get a bogus error screen.

@@ -41,6 +41,8 @@ type PlayerRow = {
 const MaxVisibleBars = 420
 const LeaderboardIntervalMs = 10_000
 const BankruptMaxEquity = 1
+/** Lets both clients receive `phase = finished` over Realtime before the row is deleted. */
+const FinishDeleteDelayMs = 2000
 
 function Num(V: string | number | null | undefined): number {
   if (V === null || V === undefined) return 0
@@ -118,11 +120,28 @@ export function MatchView() {
   const PublicId = useMemo(() => GetOrCreatePublicPlayerId(), [])
   const LastPriceRef = useRef(0)
   const PlayersRef = useRef<PlayerRow[]>([])
+  const MatchEndedRef = useRef(false)
+  const DeleteOnceRef = useRef(false)
+  const DeleteTimerRef = useRef<number | null>(null)
+  const [EndedOverlay, SetEndedOverlay] = useState<{
+    winner_slot: number | null
+  } | null>(null)
   LastPriceRef.current = Bars.length > 0 ? Bars[Bars.length - 1].close : 0
   PlayersRef.current = Players
 
   useEffect(() => {
     SetBoardScores(null)
+  }, [RoomId])
+
+  useEffect(() => {
+    MatchEndedRef.current = false
+    DeleteOnceRef.current = false
+    SetEndedOverlay(null)
+    SetLoadError(null)
+    if (DeleteTimerRef.current !== null) {
+      window.clearTimeout(DeleteTimerRef.current)
+      DeleteTimerRef.current = null
+    }
   }, [RoomId])
 
   const FetchRoomAndPlayers = useCallback(async () => {
@@ -136,6 +155,12 @@ export function MatchView() {
       return
     }
     if (!R) {
+      if (MatchEndedRef.current) {
+        SetLoadError(null)
+        SetRoom(null)
+        SetPlayers([])
+        return
+      }
       SetLoadError('Match not found.')
       return
     }
@@ -162,6 +187,26 @@ export function MatchView() {
       SetMySlot(null)
     }
   }, [Sb, RoomId, PublicId])
+
+  const ScheduleDeleteFinishedRoom = useCallback(() => {
+    if (!Sb) return
+    if (DeleteOnceRef.current) return
+    DeleteOnceRef.current = true
+    if (DeleteTimerRef.current !== null) {
+      window.clearTimeout(DeleteTimerRef.current)
+    }
+    DeleteTimerRef.current = window.setTimeout(() => {
+      DeleteTimerRef.current = null
+      void (async () => {
+        if (!Sb) return
+        await Sb.from('match_rooms')
+          .delete()
+          .eq('id', RoomId)
+          .eq('phase', 'finished')
+        await FetchRoomAndPlayers()
+      })()
+    }, FinishDeleteDelayMs)
+  }, [Sb, RoomId, FetchRoomAndPlayers])
 
   /** RPC + refetch (Realtime may miss); fallback row update if countdown already ended server-side. */
   const EnsureMatchActive = useCallback(async () => {
@@ -201,6 +246,15 @@ export function MatchView() {
   useEffect(() => {
     void FetchRoomAndPlayers()
   }, [FetchRoomAndPlayers])
+
+  useEffect(() => {
+    return () => {
+      if (DeleteTimerRef.current !== null) {
+        window.clearTimeout(DeleteTimerRef.current)
+        DeleteTimerRef.current = null
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (!Sb || !UuidRe.test(RoomId)) return
@@ -336,7 +390,7 @@ export function MatchView() {
     else if (E2 > E1) Winner = 2
     else Winner = null
 
-    await Sb.from('match_rooms')
+    const { data: UpdatedRows, error: Ue } = await Sb.from('match_rooms')
       .update({
         phase: 'finished',
         finished_at: new Date().toISOString(),
@@ -344,7 +398,23 @@ export function MatchView() {
       })
       .eq('id', RoomId)
       .eq('phase', 'active')
-  }, [Sb, RoomId])
+      .select('id')
+
+    if (Ue) return
+    if (!UpdatedRows?.length) return
+
+    SetEndedOverlay({ winner_slot: Winner })
+    MatchEndedRef.current = true
+    ScheduleDeleteFinishedRoom()
+    void FetchRoomAndPlayers()
+  }, [Sb, RoomId, FetchRoomAndPlayers, ScheduleDeleteFinishedRoom])
+
+  useEffect(() => {
+    if (Room?.phase !== 'finished') return
+    SetEndedOverlay((Prev) => Prev ?? { winner_slot: Room.winner_slot })
+    MatchEndedRef.current = true
+    ScheduleDeleteFinishedRoom()
+  }, [Room, ScheduleDeleteFinishedRoom])
 
   useEffect(() => {
     if (!Room || Room.phase !== 'active' || !Room.started_at) return
@@ -491,6 +561,19 @@ export function MatchView() {
     Slot1 &&
     Slot1.player_public_id !== PublicId
 
+  const MatchPhaseLabel =
+    EndedOverlay !== null || Room?.phase === 'finished'
+      ? 'Finished'
+      : !Room
+        ? ''
+        : Room.phase === 'waiting'
+          ? 'Lobby'
+          : Room.phase === 'countdown'
+            ? 'Starting'
+            : Room.phase === 'active'
+              ? 'Live'
+              : 'Finished'
+
   if (!IsSupabaseConfigured() || !Sb) {
     return (
       <div className="MatchShell">
@@ -509,7 +592,7 @@ export function MatchView() {
     )
   }
 
-  if (LoadError && !Room) {
+  if (LoadError && !Room && !EndedOverlay) {
     return (
       <div className="MatchShell">
         <p className="FormError">{LoadError}</p>
@@ -537,28 +620,22 @@ export function MatchView() {
           <span className="TradingApp-title">1v1 Match</span>
           <span className="TradingApp-symbol">SIM</span>
         </div>
-        {Room ? (
+        {Room || EndedOverlay ? (
           <span className="MatchMeta">
-            {Room.duration_minutes} min ·{' '}
-            {Room.phase === 'waiting'
-              ? 'Lobby'
-              : Room.phase === 'countdown'
-                ? 'Starting'
-                : Room.phase === 'active'
-                  ? 'Live'
-                  : 'Finished'}
+            {Room ? `${Room.duration_minutes} min · ` : null}
+            {MatchPhaseLabel}
           </span>
         ) : null}
       </header>
 
-      {Room?.phase === 'finished' ? (
+      {EndedOverlay ? (
         <div className="MatchOverlay MatchOverlay--result">
           <h2 className="MatchOverlay-title">Match over</h2>
-          {Room.winner_slot === null ? (
+          {EndedOverlay.winner_slot === null ? (
             <p>Tie — same equity at the bell.</p>
           ) : (
             <p>
-              {Room.winner_slot === MySlot ? 'You win.' : 'Opponent wins.'}
+              {EndedOverlay.winner_slot === MySlot ? 'You win.' : 'Opponent wins.'}
             </p>
           )}
           <Link to="/" className="Btn">
