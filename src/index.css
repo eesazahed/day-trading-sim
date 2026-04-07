@@ -5,6 +5,21 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --text-h: #1a1d24;
+  --muted: #5c6578;
+  --panel-border: #e1e4e8;
+  --panel: #f4f6f9;
+  --code-bg: #f4f3ec;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-h: #f3f4f6;
+    --muted: #9ca3af;
+    --panel-border: #2e303a;
+    --panel: #16171d;
+    --code-bg: #1f2028;
+  }
 }
 
 *,
@@ -13,9 +28,14 @@
   box-sizing: border-box;
 }
 
+html {
+  background: var(--panel);
+}
+
 body {
   margin: 0;
   min-height: 100svh;
+  background: var(--panel);
 }
 
 #root {
@@ -25,4 +45,5 @@ body {
   min-height: 100svh;
   text-align: initial;
   border: none;
+  background: var(--panel);
 }

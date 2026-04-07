@@ -111,6 +111,57 @@
   background: var(--panel);
 }
 
+.MatchTimerPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.2rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border, #e1e4e8);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, #2962ff 12%, var(--panel, #f4f6f9)),
+    var(--panel, #f4f6f9)
+  );
+}
+
+.TradingApp--dark .MatchTimerPanel {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, #2962ff 18%, #131722),
+    #16171d
+  );
+  border-color: #2e303a;
+}
+
+.MatchTimer-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted, #5c6578);
+}
+
+.MatchTimer-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.65rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  letter-spacing: 0.04em;
+  color: var(--text, #1a1d24);
+}
+
+.TradingApp--dark .MatchTimer-value {
+  color: #f3f4f6;
+}
+
+.MatchTimer-meta {
+  font-size: 0.72rem;
+  color: var(--muted, #5c6578);
+}
+
 .StatGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -289,5 +340,251 @@
   font-size: 0.7rem;
   color: var(--muted);
   text-align: center;
-  padding: 0.5rem 1rem 1rem;
+  padding: 1.5rem 1rem;
+}
+
+.TradingApp-backlink {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  margin-right: 0.75rem;
+}
+
+.TradingApp-backlink:hover {
+  color: var(--text);
+}
+
+.TradingApp--dark .TradingApp-backlink {
+  color: var(--muted);
+}
+
+.TradingApp--dark .TradingApp-backlink:hover {
+  color: var(--text);
+}
+
+.MatchMeta {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.HomeView {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3rem;
+  min-height: 100svh;
+  background: var(--panel, #f4f6f9);
+  color: var(--text-h, #1a1d24);
+}
+
+.HomeView-header {
+  margin-bottom: 1.75rem;
+}
+
+.HomeView-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-h, #1a1d24);
+}
+
+.HomeView-sub {
+  margin: 0;
+  color: var(--muted, #5c6578);
+  font-size: 0.95rem;
+}
+
+.HomeCard {
+  border: 1px solid var(--panel-border, #e1e4e8);
+  border-radius: 12px;
+  padding: 1.25rem 1.35rem;
+  margin-bottom: 1rem;
+  background: var(--panel, #f4f6f9);
+}
+
+.HomeCard--warn {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.HomeCard-title {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.HomeCard-text {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: var(--muted, #5c6578);
+  line-height: 1.45;
+}
+
+.HomeCard-cta {
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+}
+
+.DurationRow {
+  margin-bottom: 1rem;
+}
+
+.DurationChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.DurationChip {
+  cursor: pointer;
+  border: 1px solid var(--panel-border, #e1e4e8);
+  background: #fff;
+  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text, #1a1d24);
+}
+
+.DurationChip--on {
+  border-color: #2962ff;
+  background: rgba(41, 98, 255, 0.1);
+  color: #2962ff;
+}
+
+.JoinInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid var(--panel-border, #e1e4e8);
+  font-size: 0.85rem;
+  font-family: ui-monospace, monospace;
+  margin-bottom: 0.65rem;
+}
+
+.InlineCode {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+  background: var(--code-bg, #f4f3ec);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.HomeError {
+  margin-top: 1rem;
+}
+
+.MatchShell {
+  padding: 2rem;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.LeaderboardBar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.55rem 1.25rem;
+  border-bottom: 1px solid var(--panel-border, #e1e4e8);
+  background: color-mix(in srgb, var(--panel, #f4f6f9) 85%, #2962ff 15%);
+  font-size: 0.8rem;
+}
+
+.TradingApp--dark .LeaderboardBar {
+  background: #1a1d2e;
+  border-bottom-color: var(--panel-border, #2a2e39);
+}
+
+.LeaderboardBar-label {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.65rem;
+  color: var(--muted, #5c6578);
+}
+
+.LeaderboardBar-scores {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+}
+
+.Lb-vs {
+  color: var(--muted, #5c6578);
+  font-weight: 600;
+}
+
+.Lb-me {
+  color: #2962ff;
+}
+
+.LeaderboardBar-sub {
+  font-size: 0.72rem;
+  color: var(--muted, #5c6578);
+}
+
+.MatchOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(10, 12, 18, 0.82);
+  color: #f3f4f6;
+  text-align: center;
+}
+
+.MatchOverlay--result {
+  z-index: 60;
+  background: rgba(10, 12, 18, 0.92);
+}
+
+.MatchOverlay-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.MatchOverlay-hint {
+  margin: 0;
+  max-width: 28rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #d1d5db;
+}
+
+.InviteUrl {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  font-size: 0.75rem;
+}
+
+.CountdownBig {
+  font-size: 4.5rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  text-shadow: 0 0 24px rgba(41, 98, 255, 0.6);
+}
+
+footer a {
+  color: var(--muted);
+  text-decoration: none;
 }
