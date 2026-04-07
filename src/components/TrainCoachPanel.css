@@ -1,0 +1,65 @@
+.TrainCoachPanel {
+  flex-shrink: 0;
+  padding: 0.9rem 1rem 1.1rem;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  border-left: 4px solid #4285f4;
+  background: color-mix(in srgb, var(--panel) 90%, #4285f4 10%);
+  text-align: left;
+}
+
+.TradingApp--dark .TrainCoachPanel {
+  background: color-mix(in srgb, var(--panel) 88%, #5c9eff 12%);
+}
+
+.TrainCoachPanel-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.TrainCoachPanel-title {
+  margin: 0 0 0.55rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--text);
+}
+
+.TrainCoachPanel-action {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.TrainCoachPanel-action--buy {
+  color: var(--buy);
+}
+
+.TrainCoachPanel-action--wait {
+  color: #8ab4ff;
+}
+
+.TrainCoachPanel-action--sell {
+  color: var(--sell);
+}
+
+.TrainCoachPanel-body {
+  margin: 0 0 1rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text);
+  opacity: 0.95;
+}
+
+.TrainCoachPanel-continue {
+  width: 100%;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+}

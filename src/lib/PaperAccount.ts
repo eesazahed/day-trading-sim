@@ -138,6 +138,7 @@ export function UnrealizedPnlUsd(
 }
 
 const StorageKey = 'PaperAccountV1'
+export const PaperAccountStorageKeyTrain = 'PaperAccountTrainV1'
 
 export function LoadPaperAccount(): PaperAccountState {
   try {
@@ -166,6 +167,38 @@ export function LoadPaperAccount(): PaperAccountState {
 export function SavePaperAccount(State: PaperAccountState): void {
   try {
     localStorage.setItem(StorageKey, JSON.stringify(State))
+  } catch {
+    /* quota or private mode */
+  }
+}
+
+export function LoadPaperAccountTrain(): PaperAccountState {
+  try {
+    const Raw = localStorage.getItem(PaperAccountStorageKeyTrain)
+    if (!Raw) return CreateInitialPaperAccount()
+    const P = JSON.parse(Raw) as PaperAccountState
+    if (
+      typeof P.CashUsd === 'number' &&
+      typeof P.Shares === 'number' &&
+      typeof P.AverageCost === 'number' &&
+      Array.isArray(P.Trades)
+    ) {
+      return {
+        CashUsd: P.CashUsd,
+        Shares: P.Shares,
+        AverageCost: P.AverageCost,
+        Trades: P.Trades,
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return CreateInitialPaperAccount()
+}
+
+export function SavePaperAccountTrain(State: PaperAccountState): void {
+  try {
+    localStorage.setItem(PaperAccountStorageKeyTrain, JSON.stringify(State))
   } catch {
     /* quota or private mode */
   }

@@ -96,6 +96,17 @@ export function HomeView() {
       </section>
 
       <section className="HomeCard">
+        <h2 className="HomeCard-title">Train</h2>
+        <p className="HomeCard-text">
+          Same UI with optional grey future rehearsal; the coach reads the printed
+          tape — candle patterns, support/resistance, and risk if you buy or hold.
+        </p>
+        <Link to="/train" className="Btn Btn--ghost HomeCard-cta">
+          Open train mode
+        </Link>
+      </section>
+
+      <section className="HomeCard">
         <h2 className="HomeCard-title">1v1 challenge</h2>
         <p className="HomeCard-text">
           Both players see the same candles. Highest equity when time runs out

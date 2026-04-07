@@ -79,3 +79,30 @@ export function BuildCandlesThroughTick(
   }
   return { Bars, LastClose: Close }
 }
+
+/** Deterministic next `Count` candles starting at `TickIndexStart` (chain from `PreviousClose`). */
+export function BuildPreviewCandles(
+  MasterSeed: number,
+  TickIndexStart: number,
+  PreviousClose: number,
+  BaseUnix: number,
+  Count: number,
+  Volatility?: number,
+): CandlestickData[] {
+  let Close = PreviousClose
+  const Out: CandlestickData[] = []
+  for (let K = 0; K < Count; K++) {
+    const Ti = TickIndexStart + K
+    const Ut = BaseUnix + Ti
+    const { Candle, Close: Next } = CandlestickForTick(
+      MasterSeed,
+      Ti,
+      Close,
+      Ut,
+      Volatility,
+    )
+    Out.push(Candle)
+    Close = Next
+  }
+  return Out
+}

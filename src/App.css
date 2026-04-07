@@ -78,6 +78,17 @@
   }
 }
 
+.ChartWrap {
+  position: relative;
+}
+
+.TrainMode-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--muted, #5c6578);
+}
+
 .TradingApp-chart {
   min-height: 420px;
   background: #fff;
