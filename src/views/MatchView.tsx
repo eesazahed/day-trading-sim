@@ -10,10 +10,13 @@ import {
   EquityUsd,
   ExecuteMarketOrder,
   GetInitialCashUsd,
+  type OrderKind,
   type PaperAccountState,
   UnrealizedPnlUsd,
 } from '../lib/PaperAccount'
+import { MatchLengthLabel } from '../lib/MatchLabels'
 import { GetSupabase, IsSupabaseConfigured } from '../lib/SupabaseClient'
+import { FormatPositionLine, TradeSideClass } from '../lib/TradeDisplay'
 
 type RoomRow = {
   id: string
@@ -125,6 +128,8 @@ export function MatchView() {
   const DeleteTimerRef = useRef<number | null>(null)
   const [EndedOverlay, SetEndedOverlay] = useState<{
     winner_slot: number | null
+    P1EquityUsd: number
+    P2EquityUsd: number
   } | null>(null)
   LastPriceRef.current = Bars.length > 0 ? Bars[Bars.length - 1].close : 0
   PlayersRef.current = Players
@@ -403,18 +408,53 @@ export function MatchView() {
     if (Ue) return
     if (!UpdatedRows?.length) return
 
-    SetEndedOverlay({ winner_slot: Winner })
+    SetEndedOverlay({
+      winner_slot: Winner,
+      P1EquityUsd: E1,
+      P2EquityUsd: E2,
+    })
     MatchEndedRef.current = true
     ScheduleDeleteFinishedRoom()
     void FetchRoomAndPlayers()
   }, [Sb, RoomId, FetchRoomAndPlayers, ScheduleDeleteFinishedRoom])
 
   useEffect(() => {
-    if (Room?.phase !== 'finished') return
-    SetEndedOverlay((Prev) => Prev ?? { winner_slot: Room.winner_slot })
+    if (Room?.phase !== 'finished' || !Room.started_at) return
+    const P1 = Players.find((X) => X.slot === 1)
+    const P2 = Players.find((X) => X.slot === 2)
+    if (!P1 || !P2) return
+
+    const Cap = Room.duration_minutes * 60
+    const Elapsed = ElapsedTicks(Room.started_at, Date.now(), Cap)
+    const BaseUnix = Math.floor(new Date(Room.started_at).getTime() / 1000)
+    const { LastClose } = BuildCandlesThroughTick(
+      Room.prng_seed,
+      BaseUnix,
+      Elapsed,
+    )
+    const LastPx =
+      Elapsed > 0 ? LastClose : InitialCloseFromSeed(Room.prng_seed)
+
+    const P1Eq = EquityUsd(PlayerToAccount(P1), LastPx)
+    const P2Eq = EquityUsd(PlayerToAccount(P2), LastPx)
+
+    SetEndedOverlay((Prev) => {
+      if (
+        Prev &&
+        typeof Prev.P1EquityUsd === 'number' &&
+        typeof Prev.P2EquityUsd === 'number'
+      ) {
+        return Prev
+      }
+      return {
+        winner_slot: Room.winner_slot,
+        P1EquityUsd: P1Eq,
+        P2EquityUsd: P2Eq,
+      }
+    })
     MatchEndedRef.current = true
     ScheduleDeleteFinishedRoom()
-  }, [Room, ScheduleDeleteFinishedRoom])
+  }, [Room, Players, ScheduleDeleteFinishedRoom])
 
   useEffect(() => {
     if (!Room || Room.phase !== 'active' || !Room.started_at) return
@@ -507,13 +547,13 @@ export function MatchView() {
     }
   }
 
-  const OnTrade = async (Side: 'Buy' | 'Sell') => {
+  const OnTrade = async (Kind: OrderKind) => {
     if (!Room || Room.phase !== 'active') return
     SetMessage(null)
     const Q = Number.parseFloat(QuantityInput.replace(/,/g, ''))
     const Px = LastPrice
-    const Result = ExecuteMarketOrder(Account, Side, Q, Px)
-    if (!Result.Ok) {
+    const Result = ExecuteMarketOrder(Account, Kind, Q, Px)
+    if (Result.Ok === false) {
       SetMessage(Result.Error)
       return
     }
@@ -604,7 +644,7 @@ export function MatchView() {
   if (Room && MyPlayerId === null && Players.length >= 2) {
     return (
       <div className="MatchShell">
-        <p className="HomeCard-text">This match already has two players.</p>
+        <p className="Landing-card-text">This match already has two players.</p>
         <Link to="/">Home</Link>
       </div>
     )
@@ -622,7 +662,7 @@ export function MatchView() {
         </div>
         {Room || EndedOverlay ? (
           <span className="MatchMeta">
-            {Room ? `${Room.duration_minutes} min · ` : null}
+            {Room ? `${MatchLengthLabel(Room.duration_minutes)} · ` : null}
             {MatchPhaseLabel}
           </span>
         ) : null}
@@ -638,6 +678,20 @@ export function MatchView() {
               {EndedOverlay.winner_slot === MySlot ? 'You win.' : 'Opponent wins.'}
             </p>
           )}
+          <p className="MatchOverlay-equities">
+            <span>
+              Player 1 equity: $
+              {EndedOverlay.P1EquityUsd.toLocaleString(undefined, {
+                maximumFractionDigits: 0,
+              })}
+            </span>
+            <span>
+              Player 2 equity: $
+              {EndedOverlay.P2EquityUsd.toLocaleString(undefined, {
+                maximumFractionDigits: 0,
+              })}
+            </span>
+          </p>
           <Link to="/" className="Btn">
             Back home
           </Link>
@@ -730,7 +784,7 @@ export function MatchView() {
                 {FormatMatchRemaining(MatchRemainingMs)}
               </span>
               <span className="MatchTimer-meta">
-                {Room.duration_minutes} min match
+                {MatchLengthLabel(Room.duration_minutes)} · {Room.duration_minutes} min
               </span>
             </div>
           ) : null}
@@ -767,12 +821,12 @@ export function MatchView() {
               <strong>Player {MySlot ?? '—'}</strong>
             </p>
             <p className="PositionLine">
-              Shares: <strong>{Account.Shares.toLocaleString(undefined, { maximumFractionDigits: 4 })}</strong>
+              Position: <strong>{FormatPositionLine(Account.Shares)}</strong>
             </p>
             <p className="PositionLine">
-              Avg cost:{' '}
+              Avg entry:{' '}
               <strong>
-                {Account.AverageCost > 0
+                {Account.AverageCost > 0 && Math.abs(Account.Shares) > 1e-8
                   ? `$${Account.AverageCost.toFixed(4)}`
                   : '—'}
               </strong>
@@ -799,7 +853,7 @@ export function MatchView() {
               disabled={Room?.phase !== 'active'}
               autoComplete="off"
             />
-            <div className="OrderButtons">
+            <div className="OrderButtons OrderButtons--four">
               <button
                 type="button"
                 className="Btn Btn--buy"
@@ -816,6 +870,22 @@ export function MatchView() {
               >
                 Sell
               </button>
+              <button
+                type="button"
+                className="Btn Btn--short"
+                disabled={Room?.phase !== 'active'}
+                onClick={() => OnTrade('Short')}
+              >
+                Short
+              </button>
+              <button
+                type="button"
+                className="Btn Btn--cover"
+                disabled={Room?.phase !== 'active'}
+                onClick={() => OnTrade('Cover')}
+              >
+                Cover
+              </button>
             </div>
             {Message ? <p className="FormError">{Message}</p> : null}
           </div>
@@ -825,9 +895,7 @@ export function MatchView() {
             <ul className="TradesList">
               {Account.Trades.slice(0, 12).map((T) => (
                 <li key={T.Id} className="TradesItem">
-                  <span className={T.Side === 'Buy' ? 'Side-buy' : 'Side-sell'}>
-                    {T.Side}
-                  </span>{' '}
+                  <span className={TradeSideClass(T.Side)}>{T.Side}</span>{' '}
                   {T.Quantity} @ {T.Price.toFixed(4)} · ${T.Notional.toFixed(2)}
                 </li>
               ))}

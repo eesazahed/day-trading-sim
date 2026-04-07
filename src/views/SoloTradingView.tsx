@@ -11,9 +11,11 @@ import {
   GetInitialCashUsd,
   LoadPaperAccount,
   SavePaperAccount,
+  type OrderKind,
   type PaperAccountState,
   UnrealizedPnlUsd,
 } from '../lib/PaperAccount'
+import { FormatPositionLine, TradeSideClass } from '../lib/TradeDisplay'
 
 const MaxVisibleBars = 420
 const SymbolLabel = 'SIM'
@@ -103,10 +105,10 @@ export function SoloTradingView() {
   const InitialCash = GetInitialCashUsd()
   const SessionPnl = Equity - InitialCash
 
-  const OnTrade = (Side: 'Buy' | 'Sell') => {
+  const OnTrade = (Kind: OrderKind) => {
     SetMessage(null)
     const Q = Number.parseFloat(QuantityInput.replace(/,/g, ''))
-    const Result = ExecuteMarketOrder(Account, Side, Q, LastPrice)
+    const Result = ExecuteMarketOrder(Account, Kind, Q, LastPrice)
     if (!Result.Ok) {
       SetMessage(Result.Error)
       return
@@ -131,7 +133,7 @@ export function SoloTradingView() {
           <Link to="/" className="TradingApp-backlink">
             ← Home
           </Link>
-          <span className="TradingApp-title">Paper Day Trade</span>
+          <span className="TradingApp-title">Solo</span>
           <span className="TradingApp-symbol">{SymbolLabel}</span>
         </div>
         <div className="TradingApp-controls">
@@ -184,12 +186,12 @@ export function SoloTradingView() {
           <div className="PositionBlock">
             <h2 className="PanelHeading">Position</h2>
             <p className="PositionLine">
-              Shares: <strong>{Account.Shares.toLocaleString(undefined, { maximumFractionDigits: 4 })}</strong>
+              Position: <strong>{FormatPositionLine(Account.Shares)}</strong>
             </p>
             <p className="PositionLine">
-              Avg cost:{' '}
+              Avg entry:{' '}
               <strong>
-                {Account.AverageCost > 0
+                {Account.AverageCost > 0 && Math.abs(Account.Shares) > 1e-8
                   ? `$${Account.AverageCost.toFixed(4)}`
                   : '—'}
               </strong>
@@ -215,7 +217,7 @@ export function SoloTradingView() {
               onChange={(E) => SetQuantityInput(E.target.value)}
               autoComplete="off"
             />
-            <div className="OrderButtons">
+            <div className="OrderButtons OrderButtons--four">
               <button
                 type="button"
                 className="Btn Btn--buy"
@@ -229,6 +231,20 @@ export function SoloTradingView() {
                 onClick={() => OnTrade('Sell')}
               >
                 Sell
+              </button>
+              <button
+                type="button"
+                className="Btn Btn--short"
+                onClick={() => OnTrade('Short')}
+              >
+                Short
+              </button>
+              <button
+                type="button"
+                className="Btn Btn--cover"
+                onClick={() => OnTrade('Cover')}
+              >
+                Cover
               </button>
             </div>
             {Message ? <p className="FormError">{Message}</p> : null}
@@ -245,9 +261,7 @@ export function SoloTradingView() {
             <ul className="TradesList">
               {Account.Trades.slice(0, 12).map((T) => (
                 <li key={T.Id} className="TradesItem">
-                  <span className={T.Side === 'Buy' ? 'Side-buy' : 'Side-sell'}>
-                    {T.Side}
-                  </span>{' '}
+                  <span className={TradeSideClass(T.Side)}>{T.Side}</span>{' '}
                   {T.Quantity} @ {T.Price.toFixed(4)} · ${T.Notional.toFixed(2)}
                 </li>
               ))}

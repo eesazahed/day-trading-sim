@@ -3,7 +3,7 @@
 create table if not exists public.match_rooms (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
-  duration_minutes int not null check (duration_minutes in (5, 15, 30, 60)),
+  duration_minutes int not null check (duration_minutes in (2, 5, 10)),
   prng_seed int not null,
   phase text not null default 'waiting'
     check (phase in ('waiting', 'countdown', 'active', 'finished')),

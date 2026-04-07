@@ -1,9 +1,9 @@
-export type TradeSide = 'Buy' | 'Sell'
+export type OrderKind = 'Buy' | 'Sell' | 'Short' | 'Cover'
 
 export type TradeRecord = {
   Id: string
   TimeIso: string
-  Side: TradeSide
+  Side: OrderKind
   Quantity: number
   Price: number
   Notional: number
@@ -17,6 +17,8 @@ export type PaperAccountState = {
 }
 
 const InitialCashUsd = 100_000
+/** Reject trades that would leave equity below this (aligned with match bankruptcy heuristic). */
+const MinEquityAfterTradeUsd = 1
 
 export function CreateInitialPaperAccount(): PaperAccountState {
   return {
@@ -43,9 +45,35 @@ export type TradeResult =
   | { Ok: true; State: PaperAccountState }
   | { Ok: false; Error: string }
 
+function EquityAfter(State: PaperAccountState, Mark: number): number {
+  if (!Number.isFinite(Mark) || Mark <= 0) return State.CashUsd
+  return RoundMoney(State.CashUsd + State.Shares * Mark)
+}
+
+function PushTrade(
+  State: PaperAccountState,
+  Side: OrderKind,
+  Q: number,
+  Price: number,
+  Notional: number,
+): PaperAccountState {
+  const Trade: TradeRecord = {
+    Id: crypto.randomUUID(),
+    TimeIso: new Date().toISOString(),
+    Side,
+    Quantity: Q,
+    Price,
+    Notional,
+  }
+  return {
+    ...State,
+    Trades: [Trade, ...State.Trades].slice(0, 200),
+  }
+}
+
 export function ExecuteMarketOrder(
   State: PaperAccountState,
-  Side: TradeSide,
+  Kind: OrderKind,
   Quantity: number,
   MarketPrice: number,
 ): TradeResult {
@@ -59,7 +87,13 @@ export function ExecuteMarketOrder(
   const Q = RoundShares(Quantity)
   const Notional = RoundMoney(Q * MarketPrice)
 
-  if (Side === 'Buy') {
+  if (Kind === 'Buy') {
+    if (State.Shares < 0) {
+      return {
+        Ok: false,
+        Error: 'You are short — use Cover to buy back shares.',
+      }
+    }
     if (State.CashUsd < Notional) {
       return {
         Ok: false,
@@ -73,53 +107,107 @@ export function ExecuteMarketOrder(
             (State.AverageCost * State.Shares + Notional) / NewShares,
           )
         : 0
-    const Trade: TradeRecord = {
-      Id: crypto.randomUUID(),
-      TimeIso: new Date().toISOString(),
-      Side: 'Buy',
-      Quantity: Q,
-      Price: MarketPrice,
-      Notional,
+    const Next: PaperAccountState = {
+      CashUsd: RoundMoney(State.CashUsd - Notional),
+      Shares: NewShares,
+      AverageCost: NewAvg,
+      Trades: State.Trades,
     }
-    return {
-      Ok: true,
-      State: {
-        CashUsd: RoundMoney(State.CashUsd - Notional),
-        Shares: NewShares,
-        AverageCost: NewAvg,
-        Trades: [Trade, ...State.Trades].slice(0, 200),
-      },
+    const WithTrade = PushTrade(Next, 'Buy', Q, MarketPrice, Notional)
+    if (EquityAfter(WithTrade, MarketPrice) < MinEquityAfterTradeUsd) {
+      return { Ok: false, Error: 'Trade would leave equity too low.' }
     }
+    return { Ok: true, State: WithTrade }
   }
 
-  if (State.Shares < Q - 1e-8) {
-    return {
-      Ok: false,
-      Error: `Cannot sell ${Q} shares; position is ${State.Shares}.`,
+  if (Kind === 'Sell') {
+    if (State.Shares <= 0) {
+      return { Ok: false, Error: 'No long shares to sell. Use Short to open a short.' }
     }
-  }
-
-  const Trade: TradeRecord = {
-    Id: crypto.randomUUID(),
-    TimeIso: new Date().toISOString(),
-    Side: 'Sell',
-    Quantity: Q,
-    Price: MarketPrice,
-    Notional,
-  }
-
-  const NewShares = RoundShares(State.Shares - Q)
-  const NewAvg = NewShares > 0 ? State.AverageCost : 0
-
-  return {
-    Ok: true,
-    State: {
+    if (State.Shares < Q - 1e-8) {
+      return {
+        Ok: false,
+        Error: `Cannot sell ${Q} shares; long position is ${State.Shares}.`,
+      }
+    }
+    const NewShares = RoundShares(State.Shares - Q)
+    const NewAvg = NewShares > 0 ? State.AverageCost : 0
+    const Next: PaperAccountState = {
       CashUsd: RoundMoney(State.CashUsd + Notional),
       Shares: NewShares,
       AverageCost: NewAvg,
-      Trades: [Trade, ...State.Trades].slice(0, 200),
-    },
+      Trades: State.Trades,
+    }
+    const WithTrade = PushTrade(Next, 'Sell', Q, MarketPrice, Notional)
+    if (EquityAfter(WithTrade, MarketPrice) < MinEquityAfterTradeUsd) {
+      return { Ok: false, Error: 'Trade would leave equity too low.' }
+    }
+    return { Ok: true, State: WithTrade }
   }
+
+  if (Kind === 'Short') {
+    if (State.Shares > 0) {
+      return {
+        Ok: false,
+        Error: 'Sell your long position first, then use Short.',
+      }
+    }
+    const NewShares = RoundShares(State.Shares - Q)
+    const AbsOld = Math.abs(State.Shares)
+    const AbsNew = Math.abs(NewShares)
+    let NewAvg: number
+    if (State.Shares === 0) {
+      NewAvg = MarketPrice
+    } else {
+      NewAvg = RoundMoney(
+        (AbsOld * State.AverageCost + Q * MarketPrice) / AbsNew,
+      )
+    }
+    const Next: PaperAccountState = {
+      CashUsd: RoundMoney(State.CashUsd + Notional),
+      Shares: NewShares,
+      AverageCost: NewAvg,
+      Trades: State.Trades,
+    }
+    const WithTrade = PushTrade(Next, 'Short', Q, MarketPrice, Notional)
+    if (EquityAfter(WithTrade, MarketPrice) < MinEquityAfterTradeUsd) {
+      return { Ok: false, Error: 'Trade would leave equity too low (margin).' }
+    }
+    return { Ok: true, State: WithTrade }
+  }
+
+  if (Kind === 'Cover') {
+    if (State.Shares >= 0) {
+      return { Ok: false, Error: 'Nothing to cover — you are not short.' }
+    }
+    if (Q > Math.abs(State.Shares) + 1e-8) {
+      return {
+        Ok: false,
+        Error: `Can only cover up to ${Math.abs(State.Shares).toFixed(4)} shares.`,
+      }
+    }
+    if (State.CashUsd < Notional) {
+      return {
+        Ok: false,
+        Error: `Insufficient cash. Need $${Notional.toFixed(2)}, have $${State.CashUsd.toFixed(2)}.`,
+      }
+    }
+    const NewShares = RoundShares(State.Shares + Q)
+    const NewAvg = NewShares < 0 ? State.AverageCost : 0
+    const Next: PaperAccountState = {
+      CashUsd: RoundMoney(State.CashUsd - Notional),
+      Shares: NewShares,
+      AverageCost: NewAvg,
+      Trades: State.Trades,
+    }
+    const WithTrade = PushTrade(Next, 'Cover', Q, MarketPrice, Notional)
+    if (EquityAfter(WithTrade, MarketPrice) < MinEquityAfterTradeUsd) {
+      return { Ok: false, Error: 'Trade would leave equity too low.' }
+    }
+    return { Ok: true, State: WithTrade }
+  }
+
+  return { Ok: false, Error: 'Unknown order type.' }
 }
 
 export function EquityUsd(State: PaperAccountState, MarkPrice: number): number {
@@ -133,12 +221,12 @@ export function UnrealizedPnlUsd(
   State: PaperAccountState,
   MarkPrice: number,
 ): number {
-  if (State.Shares <= 0 || State.AverageCost <= 0) return 0
+  if (!Number.isFinite(MarkPrice) || MarkPrice <= 0) return 0
+  if (State.Shares === 0 || State.AverageCost <= 0) return 0
   return RoundMoney(State.Shares * (MarkPrice - State.AverageCost))
 }
 
 const StorageKey = 'PaperAccountV1'
-export const PaperAccountStorageKeyTrain = 'PaperAccountTrainV1'
 
 export function LoadPaperAccount(): PaperAccountState {
   try {
@@ -167,38 +255,6 @@ export function LoadPaperAccount(): PaperAccountState {
 export function SavePaperAccount(State: PaperAccountState): void {
   try {
     localStorage.setItem(StorageKey, JSON.stringify(State))
-  } catch {
-    /* quota or private mode */
-  }
-}
-
-export function LoadPaperAccountTrain(): PaperAccountState {
-  try {
-    const Raw = localStorage.getItem(PaperAccountStorageKeyTrain)
-    if (!Raw) return CreateInitialPaperAccount()
-    const P = JSON.parse(Raw) as PaperAccountState
-    if (
-      typeof P.CashUsd === 'number' &&
-      typeof P.Shares === 'number' &&
-      typeof P.AverageCost === 'number' &&
-      Array.isArray(P.Trades)
-    ) {
-      return {
-        CashUsd: P.CashUsd,
-        Shares: P.Shares,
-        AverageCost: P.AverageCost,
-        Trades: P.Trades,
-      }
-    }
-  } catch {
-    /* ignore */
-  }
-  return CreateInitialPaperAccount()
-}
-
-export function SavePaperAccountTrain(State: PaperAccountState): void {
-  try {
-    localStorage.setItem(PaperAccountStorageKeyTrain, JSON.stringify(State))
   } catch {
     /* quota or private mode */
   }

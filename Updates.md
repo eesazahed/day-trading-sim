@@ -60,4 +60,18 @@
 
 ## 2026-04-06 23:15 (Vercel SPA routing)
 
-- Added **`vercel.json`** with a **rewrite to `/index.html`** so direct loads of client routes (e.g. **`/solo`**, **`/train`**, **`/match/:id`**) work on [imlockedin.app](https://www.imlockedin.app/). Without this, Vercel returns **404** for deep links because only **`/`** exists as a static HTML file; in-app navigation still worked because the bundle was already loaded.
+- Added **`vercel.json`** with a **rewrite to `/index.html`** so direct loads of client routes (e.g. **`/solo`**, **`/match/:id`**) work on [imlockedin.app](https://www.imlockedin.app/). Without this, Vercel returns **404** for deep links because only **`/`** exists as a static HTML file; in-app navigation still worked because the bundle was already loaded.
+
+## 2026-04-07 (formats, short/cover, landing, chart zoom)
+
+- **Match lengths** are **2 / 5 / 10** minutes (**Bullet / Blitz / Rapid**). Updated **`match_rooms`** check in base migration and added **`20260407120000_match_duration_2_5_10.sql`** for existing DBs (maps old durations to **5** then applies the new constraint). **`MatchLengthLabel`** in **`MatchLabels.ts`** drives header/timer copy.
+- **Paper trading:** **`OrderKind`** = **Buy / Sell / Short / Cover** in **`PaperAccount.ts`**. **Sell** = long exit only; **Short** = open/add short (flat or already short); **Cover** = buy to close short; **Buy** = long add only. Equity floor after trades. **`TradeDisplay.ts`** for position line + trade tag classes.
+- **UI:** **Short** / **Cover** buttons under **Buy** / **Sell** on **solo** and **match**; styles **`Btn--short`**, **`Btn--cover`**, **`Side-short`**, **`Side-cover`**. **`OrderButtons--four`** grid.
+- **Removed train mode:** deleted **`TrainTradingView`**, **`TrainCoachPanel`**, **`TrainPivotalBreak`**, route **`/train`**, and train-only **`PaperAccount`** helpers.
+- **Landing page:** new **`Landing`** layout (hero, gradient background, card grid, duration chips with name + hint). **`App.css`** overhaul for home; removed **`.TrainMode-hint`**.
+- **Chart:** **`CandlestickChartPanel`** uses a **50-bar** tail window. While fewer than 50 real candles exist, **leading whitespace** points pad the series so the viewport always spans 50 logical bars (no more 1–2 “fat” candles that shrink as data arrives). **`lockVisibleTimeRangeOnResize`**, default **`barSpacing`**, and **`fixRightEdge: false`** so user wheel-zoom still works; auto-updates keep the last 50 in view.
+
+## 2026-04-06 (match end + chart follow)
+
+- **Chart:** Manual zoom/pan is detected via **`subscribeVisibleLogicalRangeChange`**; **`ApplyTailWindow`** runs only while “following” the tail (not after the user adjusts the range). Cleanup uses **`unsubscribeVisibleLogicalRangeChange`** (subscribe returns void, not an unsubscribe function).
+- **Match over:** **`EndedOverlay`** includes **`P1EquityUsd`** / **`P2EquityUsd`**; **`TryFinishMatch`** and the **`Room.phase === 'finished'`** effect fill them so both clients see final equities on the overlay (`.MatchOverlay-equities` in **`App.css`**).
