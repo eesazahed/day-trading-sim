@@ -1,0 +1,293 @@
+.TradingApp {
+  --panel: #f4f6f9;
+  --panel-border: #e1e4e8;
+  --text: #1a1d24;
+  --muted: #5c6578;
+  --buy: #089981;
+  --sell: #f23645;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  color: var(--text);
+  background: var(--panel);
+}
+
+.TradingApp--dark {
+  --panel: #0d0e12;
+  --panel-border: #2a2e39;
+  --text: #eaecef;
+  --muted: #9aa3b5;
+  --buy: #26a69a;
+  --sell: #ef5350;
+  background: #0d0e12;
+}
+
+.TradingApp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--panel-border);
+  background: color-mix(in srgb, var(--panel) 92%, #000 8%);
+}
+
+.TradingApp--dark .TradingApp-header {
+  background: #131722;
+}
+
+.TradingApp-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.TradingApp-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+}
+
+.TradingApp-symbol {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--buy) 18%, transparent);
+  color: var(--buy);
+}
+
+.TradingApp-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.TradingApp-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr min(360px, 100%);
+  gap: 0;
+  min-height: 0;
+}
+
+@media (max-width: 900px) {
+  .TradingApp-main {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(280px, 45vh) auto;
+  }
+}
+
+.TradingApp-chart {
+  min-height: 420px;
+  background: #fff;
+  border-right: 1px solid var(--panel-border);
+}
+
+.TradingApp--dark .TradingApp-chart {
+  background: #131722;
+  border-right-color: var(--panel-border);
+}
+
+.ChartHost {
+  width: 100%;
+  height: min(70vh, 640px);
+  min-height: 360px;
+}
+
+@media (max-width: 900px) {
+  .ChartHost {
+    height: 42vh;
+    min-height: 280px;
+  }
+}
+
+.TradingApp-panel {
+  padding: 1rem 1.1rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  overflow-y: auto;
+  background: var(--panel);
+}
+
+.StatGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.Stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: color-mix(in srgb, var(--panel) 70%, #fff 30%);
+}
+
+.TradingApp--dark .Stat {
+  background: #16171d;
+}
+
+.Stat-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.Stat-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.Stat-value--up {
+  color: var(--buy);
+}
+
+.Stat-value--down {
+  color: var(--sell);
+}
+
+.PanelHeading {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.PositionBlock,
+.OrderBlock,
+.TradesBlock {
+  border-top: 1px solid var(--panel-border);
+  padding-top: 1rem;
+}
+
+.PositionLine {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.PositionLine strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.FieldLabel {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.QtyInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+  font-size: 1rem;
+  font-family: ui-monospace, monospace;
+  background: #fff;
+  color: var(--text);
+}
+
+.TradingApp--dark .QtyInput {
+  background: #1e222d;
+  border-color: #363a45;
+  color: var(--text);
+}
+
+.OrderButtons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.Btn {
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: #2962ff;
+  color: #fff;
+}
+
+.Btn:hover {
+  filter: brightness(1.06);
+}
+
+.Btn--ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+}
+
+.Btn--buy {
+  background: var(--buy);
+  color: #fff;
+}
+
+.Btn--sell {
+  background: var(--sell);
+  color: #fff;
+}
+
+.Btn--danger {
+  width: 100%;
+  background: transparent;
+  color: var(--sell);
+  border: 1px solid color-mix(in srgb, var(--sell) 45%, transparent);
+}
+
+.FormError {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--sell);
+}
+
+.PanelActions {
+  margin-top: 0.25rem;
+}
+
+.TradesList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.TradesItem {
+  font-size: 0.78rem;
+  font-family: ui-monospace, monospace;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--panel-border);
+  color: var(--muted);
+}
+
+.Side-buy {
+  color: var(--buy);
+  font-weight: 700;
+}
+
+.Side-sell {
+  color: var(--sell);
+  font-weight: 700;
+}
+
+.TradingApp-footer {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-align: center;
+  padding: 0.5rem 1rem 1rem;
+}
