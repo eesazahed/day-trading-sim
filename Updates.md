@@ -57,3 +57,7 @@
 
 - Added migration **`20260406200000_match_delete_finished.sql`**: RLS policy **`match_rooms_delete_finished`** allows **`DELETE` on `match_rooms` only when `phase = 'finished'`**, plus **`grant delete`** to `anon` / `authenticated`. **`match_players`** rows still cascade off the room.
 - **`MatchView`**: after a match is marked **finished**, the client schedules a **2s** delayed delete (so both tabs usually see **`finished`** over Realtime first), then deletes the room. **`EndedOverlay`** keeps the “Match over” UI after the row is gone; **`FetchRoomAndPlayers`** treats “not found” as OK when the match already ended so users do not get a bogus error screen.
+
+## 2026-04-06 23:15 (Vercel SPA routing)
+
+- Added **`vercel.json`** with a **rewrite to `/index.html`** so direct loads of client routes (e.g. **`/solo`**, **`/train`**, **`/match/:id`**) work on [imlockedin.app](https://www.imlockedin.app/). Without this, Vercel returns **404** for deep links because only **`/`** exists as a static HTML file; in-app navigation still worked because the bundle was already loaded.
